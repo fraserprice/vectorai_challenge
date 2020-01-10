@@ -34,7 +34,7 @@ def load_dataset(path):
         for label, text in csv.reader(test, delimiter='\t'):
             x.append(text)
             y.append(label)
-        return np.array(y), np.array(x)
+        return np.array(x), np.array(y)
 
 
 class InputFeatures(object):
