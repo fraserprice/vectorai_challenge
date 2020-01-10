@@ -31,10 +31,10 @@ def load_dataset(path):
     with open(path, 'rt') as test:
         x = []
         y = []
-        for text, label in csv.reader(test, delimiter='\t'):
+        for label, text in csv.reader(test, delimiter='\t'):
             x.append(text)
             y.append(label)
-        return np.array(x), np.array(y)
+        return np.array(y), np.array(x)
 
 
 class InputFeatures(object):
@@ -251,9 +251,10 @@ if __name__ == "__main__":
     STATE_PATH = "./results/3-epochs/state"
     PLOT_PATH = "./results/3-epochs/plot.png"
 
-    cm = ClassificationModel(gpu=False, seed=0, val=0.05)
+    cm = ClassificationModel(gpu=True, seed=0, val=0.05)
     cm.new_model()
     cm.train(3, PLOT_PATH, model_path=STATE_PATH, config_path=CONFIG_PATH)
 
-    # cm.load_model(PATH_STATE, PATH_CONFIG)
+    # cm.load_model(STATE_PATH, CONFIG_PATH)
     # cm.create_test_predictions("./c_pred.csv")
+
