@@ -91,7 +91,7 @@ class ClassificationModel:
 
         self.model = None
         self.optimizer = None
-        self.tokenizer = BertTokenizer.from_pretrained(self.bert_model)
+        self.tokenizer = BertTokenizer.from_pretrained(self.bert_model, do_lower_case=False)
 
         self.plt_x = []
         self.plt_y = []
@@ -247,13 +247,13 @@ class ClassificationModel:
 
 
 if __name__ == "__main__":
-    PATH_CONFIG = "./results/3-epochs/config"
-    PATH_STATE = "./results/3-epochs/state"
+    CONFIG_PATH = "./results/3-epochs/config"
+    STATE_PATH = "./results/3-epochs/state"
     PLOT_PATH = "./results/3-epochs/plot.png"
 
     cm = ClassificationModel(gpu=False, seed=0, val=0.05)
     cm.new_model()
-    cm.train(3, PLOT_PATH)
+    cm.train(3, PLOT_PATH, model_path=STATE_PATH, config_path=CONFIG_PATH)
 
     # cm.load_model(PATH_STATE, PATH_CONFIG)
     # cm.create_test_predictions("./c_pred.csv")
