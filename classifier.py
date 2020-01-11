@@ -11,7 +11,7 @@ import csv
 import random
 
 CACHE = "./models"
-BERT_MODEL = "bert-large-uncased"
+BERT_MODEL = "bert-base-uncased"
 MAX_SEQ_LENGTH = 180
 
 
@@ -138,12 +138,7 @@ class ClassificationModel:
                                   t_total=int(len(self.x_train) / batch_size) * epochs)
 
         nb_tr_steps = 0
-        train_features = convert_examples_to_features(self.x_train, self.y_train, MAX_SEQ_LENGTH, self.tokenizer)
-        all_input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long)
-        all_input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long)
-        all_segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long)
-        all_label_ids = torch.tensor([f.label_id for f in train_features], dtype=torch.long)
-        train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+        train_data = self.__get_tensor_dataset(self.x_train, self.y_train)
         _, counts = np.unique(self.y_train, return_counts=True)
         class_weights = [sum(counts) / c for c in counts]
         example_weights = [class_weights[e] for e in self.y_train]
@@ -175,14 +170,8 @@ class ClassificationModel:
                 if self.gpu:
                     torch.cuda.empty_cache()
 
-    def val(self, batch_size=32, test=False):
-        eval_features = convert_examples_to_features(self.x_val, self.y_val, MAX_SEQ_LENGTH, self.tokenizer)
-        all_input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
-        all_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
-        all_segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
-        all_label_ids = torch.tensor([f.label_id for f in eval_features], dtype=torch.long)
-        eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
-
+    def val(self, batch_size=32):
+        eval_data = self.__get_tensor_dataset(self.x_val, self.y_val)
         eval_sampler = SequentialSampler(eval_data)
         eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=batch_size)
 
@@ -198,7 +187,6 @@ class ClassificationModel:
                 logits = self.model(input_ids, segment_ids, input_mask)
 
             predicted_labels = np.argmax(logits.detach().cpu().numpy(), axis=1)
-            print(predicted_labels)
             acc += np.sum(predicted_labels == gnd_labels.numpy())
             tmp_eval_f1 = f1_score(predicted_labels, gnd_labels, average='macro')
             f1 += tmp_eval_f1 * input_ids.size(0)
@@ -216,15 +204,8 @@ class ClassificationModel:
         fig.savefig(path)
         plt.close()
 
-    def create_test_predictions(self, path):
-        eval_features = convert_examples_to_features(self.x_test, [-1] * len(self.x_test), MAX_SEQ_LENGTH,
-                                                     self.tokenizer)
-        all_input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
-        all_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
-        all_segment_ids = torch.tensor([f.segment_ids for f in eval_features], dtype=torch.long)
-        all_label_ids = torch.tensor([f.label_id for f in eval_features], dtype=torch.long)
-        eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
-
+    def get_predictions(self, strings, other_threshold=None):
+        eval_data = self.__get_tensor_dataset(strings)
         eval_sampler = SequentialSampler(eval_data)
         eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=16)
 
@@ -238,16 +219,28 @@ class ClassificationModel:
             with torch.no_grad():
                 logits = self.model(input_ids, segment_ids, input_mask)
 
-            prediction = logits.detach().cpu().numpy()
-            print(prediction)
-            predictions += list(np.argmax(prediction, axis=1))
+            logits = logits.detach().cpu().numpy()
+            prediction = np.argmax(logits, axis=1)[0] if np.amax(logits) > other_threshold else -1
+            predictions.append(prediction)
+
+        return predictions
+
+    def create_test_predictions(self, path):
+        predictions = self.get_predictions(self.x_test)
         with open(path, "w") as csv_file:
             writer = csv.writer(csv_file, delimiter=',')
             writer.writerow(["Label", "Prediction"])
             for i, prediction in enumerate(predictions):
                 writer.writerow([int(self.x_test_ids[i]), prediction])
 
-        return predictions
+    def __get_tensor_dataset(self, examples, labels=None):
+        labels = [-1] * len(examples) if labels is None else labels
+        train_features = convert_examples_to_features(examples, labels, MAX_SEQ_LENGTH, self.tokenizer)
+        all_input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long)
+        all_input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long)
+        all_segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long)
+        all_label_ids = torch.tensor([f.label_id for f in train_features], dtype=torch.long)
+        return TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
 
 
 if __name__ == "__main__":

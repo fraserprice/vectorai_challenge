@@ -94,7 +94,7 @@ def create_splits(train_f, test_f, val_f, train_prop=0.9, val_prop=0.05, gen_n=1
 
 
 if __name__ == "__main__":
-    DIR = "/Users/fraser/Documents/Personal Projects/vectorai_challenge/data"
+    DIR = "./data"
     TRAIN = os.path.join(DIR, "train.tsv")
     TEST = os.path.join(DIR, "test.tsv")
     VAL = os.path.join(DIR, "val.tsv")
