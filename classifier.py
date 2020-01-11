@@ -1,3 +1,4 @@
+import math
 import os
 
 import numpy as np
@@ -27,6 +28,11 @@ class Labels(Enum):
 TRAIN = "./data/train.tsv"
 VAL = "./data/val.tsv"
 TEST = "./data/test.tsv"
+
+
+def log_to_prob(logit):
+    odds = math.pow(math.e, logit)
+    return odds / (1 + odds)
 
 
 def load_dataset(path):
@@ -220,7 +226,7 @@ class ClassificationModel:
                 logits = self.model(input_ids, segment_ids, input_mask)
 
             logits = logits.detach().cpu().numpy()
-            prediction = np.argmax(logits, axis=1)[0] if np.amax(logits) > other_threshold else -1
+            prediction = np.argmax(logits, axis=1)[0] if np.amax(log_to_prob(logits)) > other_threshold else -1
             predictions.append(prediction)
 
         return predictions
@@ -244,16 +250,16 @@ class ClassificationModel:
 
 
 if __name__ == "__main__":
-    N_EPOCHS = 5
+    N_EPOCHS = 3
     RESULTS = f"./results/{N_EPOCHS}-epochs"
     CONFIG_PATH = os.path.join(RESULTS, "config")
     STATE_PATH = os.path.join(RESULTS, "state")
     PLOT_PATH = os.path.join(RESULTS, "plot.png")
 
     cm = ClassificationModel(gpu=True, seed=0, val=0.05)
-    cm.new_model()
-    cm.train(N_EPOCHS, PLOT_PATH, model_path=STATE_PATH, config_path=CONFIG_PATH)
 
-    # cm.load_model(STATE_PATH, CONFIG_PATH)
-    # cm.create_test_predictions("./c_pred.csv")
+    # cm.new_model()
+    # cm.train(N_EPOCHS, PLOT_PATH, model_path=STATE_PATH, config_path=CONFIG_PATH)
 
+    cm.load_model(STATE_PATH, CONFIG_PATH)
+    cm.get_predictions(["01/02/19", "defo not anthing else", "France", "google"], other_threshold=0.5)
