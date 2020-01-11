@@ -1,3 +1,4 @@
+import csv
 import os
 
 import random
@@ -71,14 +72,15 @@ def read_csv(filename):
         return [i.rstrip() for i in data]
 
 
-def create_splits(train_f, test_f, val_f, train_prop=0.9, val_prop=0.05, gen_n=10000):
+def create_splits(dir, train_f, test_f, val_f, train_prop=0.9, val_prop=0.05, gen_n=10000):
     dates = [(0, get_random_date_format(get_random_date())) for _ in range(gen_n)]
-    locations = [(1, l) for l in read_csv(os.path.join(DIR, "locations.csv"))]
+    locations = [(1, l) for l in read_csv(os.path.join(dir, "locations.csv"))]
     randoms = [(2, get_random_id_string()) for _ in range(gen_n)]
-    companies = [(3, c) for c in read_csv(os.path.join(DIR, "companies.csv"))]
-    goods = [(4, g) for g in read_csv(os.path.join(DIR, "goods.csv"))]
+    companies = [(3, c) for c in read_csv(os.path.join(dir, "companies.csv"))]
+    goods = [(4, g) for g in read_csv(os.path.join(dir, "goods.csv"))]
+    other = [(5, o) for o in read_csv(os.path.join(dir, "other.csv"))]
 
-    data = dates + locations + randoms + companies + goods
+    data = dates + locations + randoms + companies + goods + other
     random.shuffle(data)
     train_cut = int(train_prop * len(data))
     val_cut = int((train_prop + val_prop) * len(data))
@@ -98,4 +100,4 @@ if __name__ == "__main__":
     TRAIN = os.path.join(DIR, "train.tsv")
     TEST = os.path.join(DIR, "test.tsv")
     VAL = os.path.join(DIR, "val.tsv")
-    create_splits(TRAIN, TEST, VAL)
+    create_splits(DIR, TRAIN, TEST, VAL)
