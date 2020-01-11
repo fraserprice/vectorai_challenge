@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import torch
 from pytorch_pretrained_bert import BertTokenizer, BertForSequenceClassification, BertAdam, BertConfig
@@ -9,7 +11,7 @@ import csv
 import random
 
 CACHE = "./models"
-BERT_MODEL = "bert-base-cased"
+BERT_MODEL = "bert-large-uncased"
 MAX_SEQ_LENGTH = 180
 
 
@@ -33,7 +35,7 @@ def load_dataset(path):
         y = []
         for label, text in csv.reader(test, delimiter='\t'):
             x.append(text)
-            y.append(label)
+            y.append(int(label))
         return np.array(x), np.array(y)
 
 
@@ -87,7 +89,7 @@ class ClassificationModel:
         self.x_train, self.y_train = load_dataset(TRAIN)
         self.x_val = np.random.choice(self.x_train, size=(int(val * len(self.x_train)),), replace=False)
         self.y_val = np.random.choice(self.y_train, size=(int(val * len(self.x_train)),), replace=False)
-        self.x_test_ids, self.x_test = load_dataset(TEST)
+        self.x_test, self.x_test_ids = load_dataset(TEST)
 
         self.model = None
         self.optimizer = None
@@ -227,7 +229,6 @@ class ClassificationModel:
         eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=16)
 
         predictions = []
-        inverse_labels = {l.value: l.name for l in Labels}
 
         for input_ids, input_mask, segment_ids, gnd_labels in tqdm(eval_dataloader, desc="Evaluating"):
             input_ids = input_ids.to(self.device)
@@ -237,9 +238,12 @@ class ClassificationModel:
             with torch.no_grad():
                 logits = self.model(input_ids, segment_ids, input_mask)
 
-            predictions += [inverse_labels[p] for p in list(np.argmax(logits.detach().cpu().numpy(), axis=1))]
+            prediction = logits.detach().cpu().numpy()
+            print(prediction)
+            predictions += list(np.argmax(prediction, axis=1))
         with open(path, "w") as csv_file:
             writer = csv.writer(csv_file, delimiter=',')
+            writer.writerow(["Label", "Prediction"])
             for i, prediction in enumerate(predictions):
                 writer.writerow([int(self.x_test_ids[i]), prediction])
 
@@ -247,13 +251,15 @@ class ClassificationModel:
 
 
 if __name__ == "__main__":
-    CONFIG_PATH = "./results/3-epochs/config"
-    STATE_PATH = "./results/3-epochs/state"
-    PLOT_PATH = "./results/3-epochs/plot.png"
+    N_EPOCHS = 5
+    RESULTS = f"./results/{N_EPOCHS}-epochs"
+    CONFIG_PATH = os.path.join(RESULTS, "config")
+    STATE_PATH = os.path.join(RESULTS, "state")
+    PLOT_PATH = os.path.join(RESULTS, "plot.png")
 
     cm = ClassificationModel(gpu=True, seed=0, val=0.05)
     cm.new_model()
-    cm.train(3, PLOT_PATH, model_path=STATE_PATH, config_path=CONFIG_PATH)
+    cm.train(N_EPOCHS, PLOT_PATH, model_path=STATE_PATH, config_path=CONFIG_PATH)
 
     # cm.load_model(STATE_PATH, CONFIG_PATH)
     # cm.create_test_predictions("./c_pred.csv")

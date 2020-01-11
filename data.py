@@ -21,17 +21,13 @@ def get_random_string(possible_chars, mu=16, sig=8):
 
 def get_random_id_string():
     r = random.random()
-    if r < 0.25:
-        id_str = get_random_string(DIGITS)
-    elif r < 0.5:
-        id_str = get_random_string(HEX_DIGITS)
-    elif r < 0.75:
-        id_str = get_random_string(ALPHANUM)
+    if r < 0.75:
+        id_str = get_random_string(random.choice([DIGITS, HEX_DIGITS, ALPHANUM]))
     else:
         id_str = get_random_string(ALPHA, mu=3, sig=1) + get_random_string(
             random.choice([DIGITS, HEX_DIGITS, ALPHANUM]))
 
-    return random.choice([id_str, id_str.upper(), id_str.lower()])
+    return id_str
 
 
 def get_random_date():
@@ -54,16 +50,13 @@ def get_random_date_format(date):
         sep = random.choice([",", ", ", " "])
 
         weekday = "" if random.random() > 0.5 else date.strftime(random.choice(["%a", "%A"]))
-        weekday = random.choice([weekday, weekday.upper(), weekday.lower()])
         if len(weekday) > 0:
             weekday += sep
             sep = random.choice([",", ", ", " "])
 
         month = date.strftime(random.choice(["%b", "%B"]))
-        month = random.choice([month, month.upper(), month.lower()])
 
-        suffix = get_suffix(date.day)
-        suffix = "" if random.random() > 0.5 else random.choice([suffix, suffix.upper()])
+        suffix = "" if random.random() > 0.5 else get_suffix(date.day)
         day = str(date.day) + suffix
 
         year = random.choice(["%Y", "%y", "'%y"])
@@ -90,17 +83,14 @@ def create_splits(train_f, test_f, val_f, train_prop=0.9, val_prop=0.05, gen_n=1
     train_cut = int(train_prop * len(data))
     val_cut = int((train_prop + val_prop) * len(data))
 
-    with open(train_f, "w") as train:
-        for label, text in data[:train_cut]:
-            train.write(f"{label}\t{text}\n")
+    def write_split(filename, d):
+        with open(filename, "w") as split:
+            for label, text in d:
+                split.write(f"{label}\t{text}\n")
 
-    with open(test_f, "w") as test:
-        for label, text in data[val_cut:]:
-            test.write(f"{label}\t{text}\n")
-
-    with open(val_f, "w") as val:
-        for label, text in data[train_cut:val_cut]:
-            val.write(f"{label}\t{text}\n")
+    write_split(train_f, data[:train_cut])
+    write_split(val_f, data[train_cut:val_cut])
+    write_split(test_f, data[val_cut:])
 
 
 if __name__ == "__main__":
