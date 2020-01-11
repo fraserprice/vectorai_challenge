@@ -252,12 +252,13 @@ if __name__ == "__main__":
 
     cm = ClassificationModel(gpu=True, seed=0, val=0.05)
 
-    cm.new_model()
-    cm.train(N_EPOCHS, PLOT_PATH, model_path=STATE_PATH, config_path=CONFIG_PATH)
+    # cm.new_model()
+    # cm.train(N_EPOCHS, PLOT_PATH, model_path=STATE_PATH, config_path=CONFIG_PATH)
 
-    # cm.load_model(STATE_PATH, CONFIG_PATH)
-    # print(cm.get_predictions([
-    #     "01/02/19", "defo not anthing else", "France", "google",
-    #     "lo this is a random @123 wifn", "GOOGLE", "AMAZON", "9234598723097afb3",
-    #     "3inds i have 2 ting lmso"
-    #     ]))
+    cm.load_model(STATE_PATH, CONFIG_PATH)
+    print(cm.get_predictions([
+        "01/02/19", "defo not anthing else", "France", "google",
+        "this is other @123 dklfjvsdfjkv", "GOOGLE", "AMAZON", "9234598723097afb3",
+        "XYZD0934098340 this isnt random", "google is a company, 10/10/2015 is a date, but this is other",
+        "jeans", "biscuit", "car"
+        ]))
