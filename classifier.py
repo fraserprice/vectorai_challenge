@@ -99,7 +99,7 @@ class ClassificationModel:
 
         self.model = None
         self.optimizer = None
-        self.tokenizer = BertTokenizer.from_pretrained(self.bert_model, do_lower_case=False)
+        self.tokenizer = BertTokenizer.from_pretrained(self.bert_model, do_lower_case=True)
 
         self.plt_x = []
         self.plt_y = []
@@ -210,10 +210,10 @@ class ClassificationModel:
         fig.savefig(path)
         plt.close()
 
-    def get_predictions(self, strings, other_threshold=None):
+    def get_predictions(self, strings, other_min_threshold=0.8, other_conf_threshold=0.05):
         eval_data = self.__get_tensor_dataset(strings)
         eval_sampler = SequentialSampler(eval_data)
-        eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=16)
+        eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=1)
 
         predictions = []
 
@@ -226,8 +226,13 @@ class ClassificationModel:
                 logits = self.model(input_ids, segment_ids, input_mask)
 
             logits = logits.detach().cpu().numpy()
-            prediction = np.argmax(logits, axis=1)[0] if np.amax(log_to_prob(logits)) > other_threshold else -1
-            predictions.append(prediction)
+            probs = [log_to_prob(logit) for logit in logits[0]]
+            print(probs)
+            desc_probs = np.sort(probs)[::-1]
+            if np.amax(probs) < other_min_threshold or desc_probs[0] - desc_probs[1] < other_conf_threshold:
+                predictions.append(-1)
+            else:
+                predictions.append(np.argmax(logits, axis=1)[0])
 
         return predictions
 
@@ -250,7 +255,7 @@ class ClassificationModel:
 
 
 if __name__ == "__main__":
-    N_EPOCHS = 3
+    N_EPOCHS = 5
     RESULTS = f"./results/{N_EPOCHS}-epochs"
     CONFIG_PATH = os.path.join(RESULTS, "config")
     STATE_PATH = os.path.join(RESULTS, "state")
@@ -262,4 +267,8 @@ if __name__ == "__main__":
     # cm.train(N_EPOCHS, PLOT_PATH, model_path=STATE_PATH, config_path=CONFIG_PATH)
 
     cm.load_model(STATE_PATH, CONFIG_PATH)
-    cm.get_predictions(["01/02/19", "defo not anthing else", "France", "google"], other_threshold=0.5)
+    print(cm.get_predictions([
+        "01/02/19", "defo not anthing else", "France", "google", 
+        "lo this is a random @123 wifn", "GOOGLE", "AMAZON", "9234598723097afb3",
+        "3inds i have 2 ting lmso"
+        ]))
